@@ -3,7 +3,7 @@ from flask_cors import CORS
 from werkzeug.utils import secure_filename
 import os
 import tempfile
-from gradio_client import Client, handle_file
+from gradio_client import Client
 import json
 import time
 import concurrent.futures
@@ -29,9 +29,20 @@ os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 try:
     ocr_client = Client("markobinario/OCRapi")
     api_available = True
+    print("✅ Gradio client initialized successfully!")
 except Exception as e:
-    print(f"Warning: Could not initialize OCR API client: {e}")
+    print(f"Warning: Could not initialize Gradio client: {e}")
+    ocr_client = None
     api_available = False
+    
+    # Try fallback method
+    try:
+        import requests
+        print("✅ Fallback requests method available")
+        api_available = True
+    except ImportError:
+        print("❌ No OCR method available")
+        api_available = False
 
 # Initialize the ML classifier
 try:
@@ -67,10 +78,49 @@ def process_pdf_with_ocr(file_path):
         
         # Define the OCR processing function
         def ocr_process():
-            return ocr_client.predict(
-                pdf_file=handle_file(file_path),
-                api_name="/predict_1"  # Using the successful endpoint
-            )
+            if ocr_client:
+                # Use gradio client
+                try:
+                    # Try the direct file path approach first
+                    return ocr_client.predict(
+                        pdf_file=file_path,
+                        api_name="/predict_1"
+                    )
+                except Exception as e:
+                    # Fallback: try with file object
+                    try:
+                        with open(file_path, 'rb') as f:
+                            return ocr_client.predict(
+                                pdf_file=f,
+                                api_name="/predict_1"
+                            )
+                    except Exception as e2:
+                        # If both fail, raise the original error
+                        raise e
+            else:
+                # Use requests fallback
+                import requests
+                try:
+                    with open(file_path, 'rb') as f:
+                        files = {'pdf_file': f}
+                        response = requests.post(
+                            "https://markobinario-ocrapi.hf.space/api/predict", 
+                            files=files, 
+                            timeout=OCR_TIMEOUT
+                        )
+                    
+                    if response.status_code == 200:
+                        result = response.json()
+                        # Convert to expected format
+                        if 'data' in result and len(result['data']) >= 3:
+                            return result['data']
+                        else:
+                            raise Exception("Unexpected API response format")
+                    else:
+                        raise Exception(f"API request failed with status {response.status_code}")
+                        
+                except Exception as e:
+                    raise Exception(f"Requests fallback failed: {str(e)}")
         
         # Run OCR processing with timeout
         result = run_with_timeout(ocr_process, OCR_TIMEOUT)
