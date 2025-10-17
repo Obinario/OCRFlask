@@ -1,3 +1,6 @@
+# Render.com compatible requirements
+# Use this file if the main requirements.txt still has issues
+
 Flask==2.3.3
 flask-cors==4.0.0
 gradio_client==0.7.0
@@ -8,8 +11,15 @@ itsdangerous==2.1.2
 click==8.1.7
 blinker==1.6.3
 gunicorn==21.2.0
-# ML Classification dependencies
-scikit-learn==1.3.0
+
+# ML Classification dependencies - Python 3.11 compatible versions
+scikit-learn==1.3.2
 joblib==1.3.2
-numpy==1.24.3
+numpy==1.24.4
 pandas==2.0.3
+
+# Alternative: Use pre-compiled wheels
+# Uncomment these if the above still fails
+# scikit-learn==1.2.2
+# numpy==1.21.6
+# pandas==1.5.3
