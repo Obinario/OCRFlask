@@ -3,13 +3,12 @@ services:
     name: ocr-ml-api
     env: python
     plan: free
-    buildCommand: pip install --upgrade pip && pip install -r requirements.txt
+    pythonVersion: 3.11.9
+    buildCommand: pip install -r requirements.txt
     startCommand: python app.py
     envVars:
       - key: FLASK_ENV
         value: production
       - key: SECRET_KEY
         generateValue: true
-      - key: PYTHON_VERSION
-        value: 3.11
     healthCheckPath: /health
